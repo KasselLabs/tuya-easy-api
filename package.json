@@ -1,0 +1,28 @@
+{
+  "name": "tuya-light-api",
+  "version": "1.0.0",
+  "description": "An easy API to control the Tuya's Wi-Fi RGB light",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "tuya",
+    "light",
+    "positivo",
+    "lampada",
+    "easy",
+    "api"
+  ],
+  "author": "Kassel Labs <contact@kassellabs.io>",
+  "license": "CC0-1.0",
+  "dependencies": {
+    "tinycolor2": "^1.4.2",
+    "tuyapi": "^7.2.0"
+  },
+  "devDependencies": {
+    "eslint": "^7.29.0",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-plugin-import": "^2.23.4"
+  }
+}
