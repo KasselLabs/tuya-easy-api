@@ -125,6 +125,10 @@ class Light {
     return this._currentState
   }
 
+  getState() {
+    return this.getCurrentState()
+  }
+
   async setState({
     power,
     mode,
