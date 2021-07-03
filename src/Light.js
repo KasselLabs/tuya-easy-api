@@ -43,12 +43,24 @@ class Light {
     this.key = key
     this._currentState = {}
     this._registerCurrentState = this._registerCurrentState.bind(this)
+    this._log = this._log.bind(this)
+
     this._connected = false
+
+    this._debug = options.debug
+
+    this._log('Debug mode enabled')
 
     this.device = new TuyAPI({
       id,
       key,
     })
+  }
+
+  _log(...args) {
+    if (this._debug) {
+      console.log(`[Light ${this.id}]`, ...args)
+    }
   }
 
   async connect() {
@@ -162,7 +174,7 @@ class Light {
       ...nextState,
     }
 
-    this._log(this._currentState)
+    this._log('New state: ', this._currentState)
   }
 
   turnOn() {
