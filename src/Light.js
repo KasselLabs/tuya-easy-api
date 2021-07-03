@@ -3,12 +3,46 @@ const TuyAPI = require('tuyapi')
 const convertTuyaColorToHex = require('./convertTuyaColorToHex')
 const convertHexColorToTuya = require('./convertHexColorToTuya')
 
-module.exports = class Light {
-  constructor(id, key) {
+
+// Tuya Keys
+const POWER = '20'
+const MODE = '21'
+const BRIGHTNESS = '22'
+const TEMPERATURE = '23'
+const COLOR = '24'
+
+// Light Modes
+const WHITE_MODE = 'white'
+const COLOR_MODE = 'colour'
+
+
+const parseBrightness = (rawBrightness) => {
+  const brightness = rawBrightness * 10
+  if (brightness < 10) {
+    return 10
+  }
+
+  if (brightness > 1000) {
+    return 1000
+  }
+
+  return brightness
+}
+
+class Light {
+  static get WHITE_MODE() {
+    return WHITE_MODE
+  }
+
+  static get COLOR_MODE() {
+    return COLOR_MODE
+  }
+
+  constructor(id, key, options = {}) {
     this.id = id
     this.key = key
-    this._currentStatus = {}
-    this._registerCurrentStatus = this._registerCurrentStatus.bind(this)
+    this._currentState = {}
+    this._registerCurrentState = this._registerCurrentState.bind(this)
 
     this.device = new TuyAPI({
       id,
@@ -29,37 +63,38 @@ module.exports = class Light {
     await this.device.disconnect()
   }
 
-  getCurrentStatus() {
-    return this._currentStatus
+  getCurrentState() {
+    return this._currentState
   }
 
-  async setStatus({
-    lit,
+  async setState({
+    power,
     mode,
     brightness,
-    coolness,
+    temperature,
     color,
   }) {
     const tuyaApiOptions = {}
 
-    if (lit !== undefined) {
-      tuyaApiOptions[20] = lit
+    if (power !== undefined) {
+      tuyaApiOptions[POWER] = power
     }
 
     if (mode !== undefined) {
-      tuyaApiOptions[21] = mode
+      tuyaApiOptions[MODE] = mode
     }
 
     if (brightness !== undefined) {
-      tuyaApiOptions[22] = brightness
+      const parsedBrightness = parseBrightness(brightness)
+      tuyaApiOptions[BRIGHTNESS] = parsedBrightness
     }
 
-    if (coolness !== undefined) {
-      tuyaApiOptions[23] = coolness
+    if (temperature !== undefined) {
+      tuyaApiOptions[TEMPERATURE] = temperature
     }
 
     if (color !== undefined) {
-      tuyaApiOptions[24] = convertHexColorToTuya(color)
+      tuyaApiOptions[COLOR] = convertHexColorToTuya(color)
     }
 
     return this.device.set({
@@ -68,32 +103,94 @@ module.exports = class Light {
     })
   }
 
-  _registerCurrentStatus(data) {
+  _registerCurrentState(data) {
     const { dps } = data
-    const lit = dps['20']
-    const mode = dps['21']
-    const brightness = dps['22']
-    const coolness = dps['23']
-    const rawColor = dps['24']
+    const power = dps[POWER]
+    const mode = dps[MODE]
+    const brightness = dps[BRIGHTNESS]
+    const temperature = dps[TEMPERATURE]
+    const rawColor = dps[COLOR]
 
     if (lit !== undefined) {
       this._currentStatus.lit = lit
     }
 
+    const nextState = {}
+
+    if (power !== undefined) {
+      nextState.power = power
+    }
     if (mode !== undefined) {
-      this._currentStatus.mode = mode
+      nextState.mode = mode
     }
-
     if (brightness !== undefined) {
-      this._currentStatus.brightness = brightness
+      nextState.brightness = brightness / 10
     }
-
-    if (coolness !== undefined) {
-      this._currentStatus.coolness = coolness
+    if (temperature !== undefined) {
+      nextState.temperature = temperature
     }
-
     if (rawColor !== undefined) {
-      this._currentStatus.color = convertTuyaColorToHex(rawColor)
+      nextState.color = convertTuyaColorToHex(rawColor)
     }
+
+    this._currentState = {
+      ...this._currentState,
+      ...nextState,
+    }
+
+    this._log(this._currentState)
+  }
+
+  turnOn() {
+    return this.setState({ power: true })
+  }
+
+  turnOff() {
+    return this.setState({ power: false })
+  }
+
+  setColorMode() {
+    return this.setState({ mode: COLOR_MODE })
+  }
+
+  setWhiteMode() {
+    return this.setState({ mode: WHITE_MODE })
+  }
+
+  /**
+   * Change Light brightness percentage
+   * @param {number} brightness From 1 to 100 percentage of the brightness
+   * @returns
+   */
+  setBrightness(brightness) {
+    return this.setState({ brightness })
+  }
+
+  /**
+   * Change light temperature
+   * @param {number} temperature From 0 (HOT) to 1000 (COLD)
+   * @returns
+   */
+  async setTemperature(temperature) {
+    const isWhiteMode = this._currentState.mode === WHITE_MODE
+    if (!isWhiteMode) {
+      await this.setWhiteMode()
+    }
+    return this.setState({ temperature })
+  }
+
+  /**
+   * Change light color
+   * @param {string} color Color in CSS string example 'FF0000' or 'rgb(0,0,255)'
+   * @returns
+   */
+  async setColor(color) {
+    const isColorMode = this._currentState.mode === COLOR_MODE
+    if (!isColorMode) {
+      await this.setColorMode()
+    }
+    return this.setState({ color })
   }
 }
+
+module.exports = Light
