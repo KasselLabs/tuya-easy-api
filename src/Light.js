@@ -43,6 +43,7 @@ class Light {
     this.key = key
     this._currentState = {}
     this._registerCurrentState = this._registerCurrentState.bind(this)
+    this._connected = false
 
     this.device = new TuyAPI({
       id,
@@ -55,8 +56,31 @@ class Light {
 
     await this.device.connect()
 
-    this.device.on('data', this._registerCurrentStatus)
-    this.device.on('dp-refresh', this._registerCurrentStatus)
+    this.device.on('disconnected', () => {
+      this._log('Light Disconnected.')
+      // TODO handle try to auto reconnect to the light
+    })
+
+    this.device.on('error', (error) => {
+      this._log('Light Error!')
+      if (this._debug) {
+        console.error(error)
+      }
+      throw error
+    })
+
+    this.device.on('data', this._registerCurrentState)
+    this.device.on('dp-refresh', this._registerCurrentState)
+
+    // Only return the connect after the first State is registered
+    return new Promise((resolve) => {
+      const intervalId = setInterval(() => {
+        if (this._connected) {
+          clearInterval(intervalId)
+          resolve()
+        }
+      }, 100)
+    })
   }
 
   async disconnect() {
@@ -111,8 +135,8 @@ class Light {
     const temperature = dps[TEMPERATURE]
     const rawColor = dps[COLOR]
 
-    if (lit !== undefined) {
-      this._currentStatus.lit = lit
+    if (!this._connected) {
+      this._connected = true
     }
 
     const nextState = {}
