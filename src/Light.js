@@ -3,6 +3,7 @@ const TuyAPI = require('tuyapi')
 const convertTuyaColorToHex = require('./convertTuyaColorToHex')
 const convertHexColorToTuya = require('./convertHexColorToTuya')
 
+const RECONNECT_TIMEOUT = 5000
 
 // Tuya Keys
 const POWER = '20'
@@ -15,6 +16,11 @@ const COLOR = '24'
 const WHITE_MODE = 'white'
 const COLOR_MODE = 'colour'
 
+const sleep = async (sleepTime) => new Promise((resolve) => {
+  setTimeout(() => {
+    resolve()
+  }, sleepTime)
+})
 
 const parseBrightness = (rawBrightness) => {
   const brightness = rawBrightness * 10
@@ -63,8 +69,24 @@ class Light {
     }
   }
 
+  // This method will always retry to connect to the Light if not found
+  async _findLightDevice() {
+    try {
+      await this.device.find()
+    } catch (error) {
+      if (this._debug) {
+        console.error(error)
+      }
+      this._log(`Light device not found, retrying in ${RECONNECT_TIMEOUT / 1000} seconds...`)
+      sleep(RECONNECT_TIMEOUT)
+      return this._findLightDevice()
+    }
+
+    return null
+  }
+
   async connect() {
-    await this.device.find()
+    await this._findLightDevice()
 
     await this.device.connect()
 
