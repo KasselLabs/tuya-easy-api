@@ -11,10 +11,12 @@ const MODE = '21'
 const BRIGHTNESS = '22'
 const TEMPERATURE = '23'
 const COLOR = '24'
+const SCENE = '25'
 
 // Light Modes
 const WHITE_MODE = 'white'
 const COLOR_MODE = 'colour'
+const SCENE_MODE = 'scene'
 
 const sleep = async (sleepTime) => new Promise((resolve) => {
   setTimeout(() => {
@@ -135,6 +137,7 @@ class Light {
     brightness,
     temperature,
     color,
+    scene,
   }) {
     const tuyaApiOptions = {}
 
@@ -159,6 +162,10 @@ class Light {
       tuyaApiOptions[COLOR] = convertHexColorToTuya(color)
     }
 
+    if (scene !== undefined) {
+      tuyaApiOptions[SCENE] = scene
+    }
+
     return this.device.set({
       multiple: true,
       data: tuyaApiOptions,
@@ -172,6 +179,7 @@ class Light {
     const brightness = dps[BRIGHTNESS]
     const temperature = dps[TEMPERATURE]
     const rawColor = dps[COLOR]
+    const scene = dps[SCENE]
 
     if (!this._connected) {
       this._connected = true
@@ -182,15 +190,23 @@ class Light {
     if (power !== undefined) {
       nextState.power = power
     }
+
     if (mode !== undefined) {
       nextState.mode = mode
     }
+
     if (brightness !== undefined) {
       nextState.brightness = brightness / 10
     }
+
     if (temperature !== undefined) {
       nextState.temperature = temperature
     }
+
+    if (scene !== undefined) {
+      nextState.scene = scene
+    }
+
     if (rawColor !== undefined) {
       nextState.color = convertTuyaColorToHex(rawColor)
     }
@@ -252,6 +268,10 @@ class Light {
       await this.setColorMode()
     }
     return this.setState({ color })
+  }
+
+  async setScene(scene) {
+    return this.setState({ mode: SCENE_MODE, scene })
   }
 }
 
