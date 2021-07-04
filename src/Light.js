@@ -46,6 +46,14 @@ class Light {
     return COLOR_MODE
   }
 
+  /**
+   *
+   * @param {*} id Device ID on Tuya API
+   * @param {*} key Device Key on Tuya API
+   * @param {*} options options.debug enable verbose debug mode,
+   * options.waitFirstState will wait for the first state when
+   * connect to the device to resolve `connect()` method.
+   */
   constructor(id, key, options = {}) {
     this.id = id
     this.key = key
@@ -56,6 +64,7 @@ class Light {
     this._connected = false
 
     this._debug = options.debug
+    this._waitFirstState = options.waitFirstState
 
     this._log('Debug mode enabled')
 
@@ -108,15 +117,19 @@ class Light {
     this.device.on('data', this._registerCurrentState)
     this.device.on('dp-refresh', this._registerCurrentState)
 
-    // Only return the connect after the first State is registered
-    return new Promise((resolve) => {
-      const intervalId = setInterval(() => {
-        if (this._connected) {
-          clearInterval(intervalId)
-          resolve()
-        }
-      }, 100)
-    })
+    if (this._waitFirstState) {
+      // Only return the connect after the first State is registered
+      return new Promise((resolve) => {
+        const intervalId = setInterval(() => {
+          if (this._connected) {
+            clearInterval(intervalId)
+            resolve()
+          }
+        }, 100)
+      })
+    }
+
+    return Promise.resolve()
   }
 
   async disconnect() {
