@@ -1,9 +1,7 @@
-const TuyAPI = require('tuyapi')
+const Device = require('./Device')
 
 const convertTuyaColorToHex = require('./convertTuyaColorToHex')
 const convertHexColorToTuya = require('./convertHexColorToTuya')
-
-const RECONNECT_TIMEOUT = 5000
 
 // Tuya Keys
 const POWER = '20'
@@ -18,12 +16,6 @@ const WHITE_MODE = 'white'
 const COLOR_MODE = 'colour'
 const SCENE_MODE = 'scene'
 
-const sleep = async (sleepTime) => new Promise((resolve) => {
-  setTimeout(() => {
-    resolve()
-  }, sleepTime)
-})
-
 const parseBrightness = (rawBrightness) => {
   const brightness = rawBrightness * 10
   if (brightness < 10) {
@@ -37,7 +29,7 @@ const parseBrightness = (rawBrightness) => {
   return brightness
 }
 
-class Light {
+class Light extends Device {
   static get WHITE_MODE() {
     return WHITE_MODE
   }
@@ -46,102 +38,14 @@ class Light {
     return COLOR_MODE
   }
 
-  /**
-   *
-   * @param {*} id Device ID on Tuya API
-   * @param {*} key Device Key on Tuya API
-   * @param {*} options options.debug enable verbose debug mode,
-   * options.waitFirstState will wait for the first state when
-   * connect to the device to resolve `connect()` method.
-   */
-  constructor(id, key, options = {}) {
-    this.id = id
-    this.key = key
-    this._currentState = {}
-    this._registerCurrentState = this._registerCurrentState.bind(this)
-    this._log = this._log.bind(this)
+  constructor(...args) {
+    super(...args)
 
-    this._connected = false
-
-    this._debug = options.debug
-    this._waitFirstState = options.waitFirstState
-
-    this._log('Debug mode enabled')
-
-    this.device = new TuyAPI({
-      id,
-      key,
-    })
-  }
-
-  _log(...args) {
-    if (this._debug) {
-      console.log(`[Light ${this.id}]`, ...args)
-    }
-  }
-
-  // This method will always retry to connect to the Light if not found
-  async _findLightDevice() {
-    try {
-      await this.device.find()
-    } catch (error) {
-      if (this._debug) {
-        console.error(error)
-      }
-      this._log(`Light device not found, retrying in ${RECONNECT_TIMEOUT / 1000} seconds...`)
-      sleep(RECONNECT_TIMEOUT)
-      return this._findLightDevice()
-    }
-
-    return null
-  }
-
-  async connect() {
-    await this._findLightDevice()
-
-    await this.device.connect()
-
-    this.device.on('disconnected', () => {
-      this._log('Light Disconnected.')
-      // TODO handle try to auto reconnect to the light
-    })
-
-    this.device.on('error', (error) => {
-      this._log('Light Error!')
-      if (this._debug) {
-        console.error(error)
-      }
-      throw error
-    })
-
-    this.device.on('data', this._registerCurrentState)
-    this.device.on('dp-refresh', this._registerCurrentState)
-
-    if (this._waitFirstState) {
-      // Only return the connect after the first State is registered
-      return new Promise((resolve) => {
-        const intervalId = setInterval(() => {
-          if (this._connected) {
-            clearInterval(intervalId)
-            resolve()
-          }
-        }, 100)
-      })
-    }
-
-    return Promise.resolve()
-  }
-
-  async disconnect() {
-    await this.device.disconnect()
-  }
-
-  getCurrentState() {
-    return this._currentState
+    this.state = {}
   }
 
   getState() {
-    return this.getCurrentState()
+    return this.state
   }
 
   async setState({
@@ -179,13 +83,10 @@ class Light {
       tuyaApiOptions[SCENE] = scene
     }
 
-    return this.device.set({
-      multiple: true,
-      data: tuyaApiOptions,
-    })
+    return this._setState(tuyaApiOptions)
   }
 
-  _registerCurrentState(data) {
+  onDeviceStateUpdate(data) {
     const { dps } = data
     const power = dps[POWER]
     const mode = dps[MODE]
@@ -193,10 +94,6 @@ class Light {
     const temperature = dps[TEMPERATURE]
     const rawColor = dps[COLOR]
     const scene = dps[SCENE]
-
-    if (!this._connected) {
-      this._connected = true
-    }
 
     const nextState = {}
 
@@ -224,12 +121,10 @@ class Light {
       nextState.color = convertTuyaColorToHex(rawColor)
     }
 
-    this._currentState = {
-      ...this._currentState,
+    this.state = {
+      ...this.state,
       ...nextState,
     }
-
-    this._log('New state: ', this._currentState)
   }
 
   turnOn() {
@@ -263,7 +158,7 @@ class Light {
    * @returns
    */
   async setTemperature(temperature) {
-    const isWhiteMode = this._currentState.mode === WHITE_MODE
+    const isWhiteMode = this.state.mode === WHITE_MODE
     if (!isWhiteMode) {
       await this.setWhiteMode()
     }
@@ -276,7 +171,7 @@ class Light {
    * @returns
    */
   async setColor(color) {
-    const isColorMode = this._currentState.mode === COLOR_MODE
+    const isColorMode = this.state.mode === COLOR_MODE
     if (!isColorMode) {
       await this.setColorMode()
     }
