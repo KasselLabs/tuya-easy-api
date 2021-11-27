@@ -10,6 +10,10 @@ More devices can be included in the future
 
 Tested with RGB Lights
 
-### Smart Plug 
+### Smart Plug
 
 Turn on/off smart power plugs
+
+### Smart Switch
+
+Turn on/off smart switches
