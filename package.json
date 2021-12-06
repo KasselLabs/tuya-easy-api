@@ -1,11 +1,15 @@
 {
-  "name": "tuya-light-api",
-  "version": "1.0.0",
-  "description": "An easy API to control the Tuya's Wi-Fi RGB light",
+  "name": "tuya-easy-api",
+  "version": "0.0.0",
+  "description": "An easy API to control the Tuya's SmartHome devices",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "files": [
+    "index.js",
+    "src"
+  ],
   "keywords": [
     "tuya",
     "light",
