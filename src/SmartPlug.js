@@ -25,6 +25,10 @@ class SmartPlug extends Device {
     }
   }
 
+  getState() {
+    return this.state
+  }
+
   setState({ power }) {
     const tuyaApiOptions = {}
 
