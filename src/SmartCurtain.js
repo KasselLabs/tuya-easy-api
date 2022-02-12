@@ -6,6 +6,7 @@ const LAST_ACTION = '7'
 
 const OPEN = 'open'
 const CLOSE = 'close'
+const STOP = 'stop'
 
 // Last action states
 // const OPENING = 'opening'
@@ -69,6 +70,10 @@ class SmartCurtain extends Device {
 
   setClosedPercentage(closedPercentage) {
     return this.setState({ closedPercentage })
+  }
+
+  stop() {
+    return this.setState({ state: STOP })
   }
 }
 
