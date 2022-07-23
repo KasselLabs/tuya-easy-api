@@ -17,3 +17,7 @@ Turn on/off smart power plugs
 ### Smart Switch
 
 Turn on/off smart switches
+
+### Smart Curtain
+
+Open, close and set position on Smart Curtain devices.
