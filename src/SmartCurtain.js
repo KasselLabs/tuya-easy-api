@@ -23,6 +23,9 @@ class SmartCurtain extends Device {
 
   onDeviceStateUpdate(data) {
     const { dps } = data
+    if (!dps) {
+      return
+    }
     const state = dps[STATE]
     const closedPercentage = dps[CLOSED_PERCENTAGE]
     const lastAction = dps[LAST_ACTION]
