@@ -1,6 +1,7 @@
 const TuyAPI = require('tuyapi')
 
 const RECONNECT_TIMEOUT = 5000
+const DEFAULT_MAX_RECONNECT_TRIALS = 5
 
 const sleep = async (sleepTime) => new Promise((resolve) => {
   setTimeout(() => {
@@ -15,7 +16,9 @@ class Device {
    * @param {*} key Device Key on Tuya API
    * @param {*} options options.debug enable verbose debug mode,
    * options.waitFirstState will wait for the first state when
-   * connect to the device to resolve `connect()` method.
+   *           connect to the device to resolve `connect()` method.
+   * options.debugLabel device label on debug logs
+   * options.maxConnectTrials max time that the device will try to connect
    */
   constructor(id, key, options = {}) {
     this.id = id
@@ -27,7 +30,10 @@ class Device {
     this._connected = false
 
     this._debug = options.debug
+    this._debugLabel = options.debugLabel
     this._waitFirstState = options.waitFirstState
+    this._maxConnectTrials = options.maxConnectTrials || DEFAULT_MAX_RECONNECT_TRIALS
+    this._connectTrials = 0
 
     this._log('Debug mode enabled')
 
@@ -40,11 +46,11 @@ class Device {
   _log(...args) {
     if (this._debug) {
       // eslint-disable-next-line no-console
-      console.log(`[Device ${this.id}]`, ...args)
+      console.log(`[Device ${this._debugLabel || this.id}]`, ...args)
     }
   }
 
-  // This method will always retry to connect to the Light if not found
+  // This method will retry to connect to the Light if not found
   async _findDevice() {
     try {
       await this.device.find()
@@ -53,12 +59,20 @@ class Device {
         // eslint-disable-next-line no-console
         console.error(error)
       }
+      this._connectTrials += 1
+      if (this._connectTrials > this._maxConnectTrials) {
+        throw new Error('Device offline or not found')
+      }
       this._log(`Device not found, retrying in ${RECONNECT_TIMEOUT / 1000} seconds...`)
       sleep(RECONNECT_TIMEOUT)
       return this._findDevice()
     }
 
     return null
+  }
+
+  isConnected() {
+    return this._connected
   }
 
   async connect() {
@@ -118,6 +132,7 @@ class Device {
     const nextState = dps
 
     if (!this._connected) {
+      this._log('Device Connected.')
       this._connected = true
     }
 
