@@ -21,7 +21,7 @@
   "author": "Kassel Labs <contact@kassellabs.io>",
   "license": "CC0-1.0",
   "dependencies": {
-    "tinycolor2": "^1.4.2",
+    "tinycolor2": "^1.6.0",
     "tuyapi": "^7.2.0"
   },
   "devDependencies": {
